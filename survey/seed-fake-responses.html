@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Seed 200 Fake Responses (run once, keep on your computer only)</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="font-family:monospace; background:#111; color:#ddd; padding:40px; max-width:700px; margin:0 auto;">
+
+<h2>Seed 200 fake survey responses</h2>
+<p>
+  One-time setup tool. It adds 200 believable fake responses into your real
+  Supabase table, so your first real player sees "Total responses: 201"
+  instead of "1". Real submissions are then added on top, same table, same counting.
+</p>
+<p style="color:#e0a; font-weight:bold;">
+  Run it ONCE, from your own computer (double-click this file). Do NOT upload
+  it to GitHub. Running it twice adds another 200.
+</p>
+
+<button id="seedBtn" style="font-size:16px; padding:12px 24px; cursor:pointer;">Insert 200 fake responses</button>
+<pre id="log" style="margin-top:20px; white-space:pre-wrap;"></pre>
+
+<script>
+// Use the SAME two values you put in survey.html
+const SUPABASE_URL = "https://ztyiqumfipnopqdiwerf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0eWlxdW1maXBub3BxZGl3ZXJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1NzY3MzUsImV4cCI6MjEwNTE1MjczNX0.DbeMG0h8UzXTAOC9E5ZWdIyjIDyJd_3MrqkQ2iXFwcU";
+const SURVEY_ID = "case-file-ending-survey"; // must match survey.html
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const logEl = document.getElementById("log");
+function log(m){ logEl.textContent += m + "\n"; }
+
+function weightedPick(options, weights){
+  const total = weights.reduce((a,b)=>a+b,0);
+  let r = Math.random()*total;
+  for(let i=0;i<options.length;i++){ r -= weights[i]; if(r<=0) return options[i]; }
+  return options[options.length-1];
+}
+
+const conclusions = ["Nermin was killed","Nermin was kidnapped","Nermin committed suicide","Nermin escaped alone"];
+const conclusionW = [22.5, 60.6, 1.3, 15.6];
+
+const responsible = ["No one/she did it on her own","Murat Arslan","Ahmet Demir","Fatma Aydin","Ayse Kaya","Ali Celik","Mehmet Sahin","Zehra Koc","Emine Yildiz","Hasan Yildiz"];
+const responsibleW = [7,34,14,1,1,23,15,13,17,21];
+
+const car = ["Someone else","Emine Yildiz","Hasan Yildiz","Murat Arslan","Mehmet Sahin","Ahmet Demir","Ali Celik","Zehra Koc","Ayse Kaya","Fatma Aydin"];
+const carW = [15.4, 26.1, 40.1, 4.1, 3.6, 2.2, 5.0, 2.3, 0.4, 0.8];
+
+const hospital = ["Miscarriage","Unknown reason","Actually didn't go to hospital","Low blood sugar","Panic attack","Cancer","Asthma attack","Sprain","Kidney failure","Allergy"];
+const hospitalW = [85.6, 3.6, 1.8, 6.4, 1.4, 0.4, 0.1, 0.3, 0.5, 0.1];
+
+const finalDecision = [
+  "Keep Nermin's escape to yourself. Murat Arslan will continue to stay in prison, Nermin will continue to live in hiding.",
+  "Go to the police with the last evidence in your hand. Hasan Yildiz and Emine Yildiz will be arrested for misleading the police, Murat Arslan will be released."
+];
+const finalW = [77.3, 22.7];
+
+const sources = ["insta","reddit","friend","tiktok","google search","discord",""];
+
+function pickSeveral(){
+  const n = Math.random() < 0.6 ? 1 : (Math.random() < 0.85 ? 2 : 3);
+  return responsible
+    .map((v,i)=>({v, k: Math.random()*responsibleW[i]}))
+    .sort((a,b)=>b.k-a.k).slice(0,n).map(x=>x.v);
+}
+
+function fakeRow(){
+  return {
+    survey_id: SURVEY_ID,
+    anon_id: crypto.randomUUID(),
+    answers: {
+      conclusion: weightedPick(conclusions, conclusionW),
+      responsible: pickSeveral(),
+      car_accident: weightedPick(car, carW),
+      hospital_reason: weightedPick(hospital, hospitalW),
+      final_decision: weightedPick(finalDecision, finalW)
+    },
+    review_text: null,
+    review_public: false,
+    source: sources[Math.floor(Math.random()*sources.length)] || null
+  };
+}
+
+document.getElementById("seedBtn").addEventListener("click", async () => {
+  document.getElementById("seedBtn").disabled = true;
+  const rows = Array.from({length:200}, fakeRow);
+  let done = 0;
+  for(let i=0;i<rows.length;i+=50){
+    const { error } = await supabaseClient.from("survey_responses").insert(rows.slice(i,i+50));
+    if(error){ log("ERROR: " + error.message + "\n" + done + " rows inserted before the error."); return; }
+    done += 50;
+    log("Inserted " + done + " / 200");
+  }
+  log("\nDone. Open survey.html to see the results. Don't run this again.");
+});
+</script>
+</body>
+</html>

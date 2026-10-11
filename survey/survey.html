@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game End Survey — CASE FILES</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23060708'/%3E%3Cpath d='M18 12h28v40H18z' fill='%23a72e2a'/%3E%3Cpath d='M23 20h18M23 28h18M23 36h13' stroke='%23f3eee5' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='45' cy='45' r='7' fill='%23d1ad5a'/%3E%3Cpath d='M42 45h6M45 42v6' stroke='%23060708' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Cinzel:wght@400;600;700;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600&display=swap" rel="stylesheet">
+
+<!--
+  ============================================================
+  SETUP — read this before publishing
+  ============================================================
+  1. Create a free Supabase project (supabase.com), run schema.sql
+     (see the README from earlier) once in its SQL editor.
+  2. Paste your Project URL and anon public key into the two
+     constants below, SUPABASE_URL and SUPABASE_ANON_KEY.
+  3. Edit the SURVEY_CONFIG object further down (search
+     "EDIT YOUR QUESTIONS BELOW") to change questions/options.
+  4. Change the two "home link" href values near the top of the
+     body to point at your actual homepage URL.
+  That's it — everything else in this single file runs as-is.
+  ============================================================
+-->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --bg:#060708;
+  --bg2:#0c0e10;
+  --panel:#0f1114;
+  --panel2:#141619;
+
+  --ink:#d4cfc3;
+  --ink2:#e8e3d8;
+  --dim:#6b6660;
+  --dim2:#8a8480;
+
+  --line:#252830;
+  --line2:#2e3238;
+
+  --accent:#7a1c1c;
+  --accent2:#b5342f;
+  --accent3:#c94040;
+
+  --gold:#9c7c3a;
+  --gold2:#b8943f;
+
+  --ok:#5a8a4a;
+  --ok2:#7aad62;
+
+  --mono:'JetBrains Mono','Courier New',monospace;
+  --serif:'Source Serif 4',Georgia,serif;
+  --display:'Cinzel','Georgia',serif;
+
+  --r:3px;
+  --r2:6px;
+}
+
+/* ---------- Light theme override — mirrors the main site's
+   body.light-theme variables exactly, so the two pages match. ---------- */
+body.light-theme{
+  --bg:#f3f1ec;
+  --bg2:#e9e6df;
+  --panel:#ffffff;
+  --panel2:#f7f5f0;
+  --ink:#25231f;
+  --ink2:#15130f;
+  --dim:#716c63;
+  --dim2:#5f5a52;
+  --line:#d7d2c8;
+  --line2:#c7c1b6;
+  --accent:#7a1c1c;
+  --accent2:#a72e2a;
+  --accent3:#bd3939;
+  --gold:#8b6b2d;
+  --gold2:#a27c31;
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--serif);
+  line-height:1.7;
+  transition:background .25s ease, color .25s ease;
+}
+
+/* ---------- Top bar with home mark ---------- */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 28px;
+  background:linear-gradient(180deg,rgba(10,11,12,.97),rgba(12,13,15,.9));
+  border-bottom:1px solid rgba(188,160,106,.18);
+  box-shadow:0 12px 30px rgba(0,0,0,.35);
+}
+.home-mark{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  color:#e9dfcf;
+}
+.home-mark .dot{
+  width:10px;height:10px;
+  border-radius:50%;
+  background:var(--gold2);
+  box-shadow:0 0 0 4px rgba(208,148,92,.08),0 0 16px rgba(208,148,92,.65);
+}
+.home-mark span{
+  font:600 13px/1.3 var(--display);
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+.home-mark:hover span{ color:var(--gold2); }
+.topbar-links{
+  display:flex;
+  gap:22px;
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.topbar-links a{
+  color:var(--dim2);
+  text-decoration:none;
+  transition:color .2s ease;
+}
+.topbar-links a:hover{ color:var(--accent3); }
+
+.theme-toggle{
+  display:flex;
+  align-items:center;
+  gap:3px;
+  margin-left:16px;
+  padding:2px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--panel2);
+}
+.theme-toggle button{
+  width:28px;height:26px;
+  padding:0;
+  border:1px solid transparent;
+  border-radius:50%;
+  background:transparent;
+  color:var(--dim);
+  display:grid;
+  place-items:center;
+  font-size:13px;
+  line-height:1;
+  cursor:pointer;
+  transition:all .25s ease;
+}
+.theme-toggle button:hover{ color:var(--ink2); border-color:rgba(181,52,47,.25); }
+.theme-toggle button.active{
+  color:var(--ink2);
+  background:rgba(181,52,47,.10);
+  border-color:rgba(181,52,47,.22);
+}
+
+/* ---------- Page shell ---------- */
+.page{
+  max-width:760px;
+  margin:0 auto;
+  padding:48px 24px 80px;
+}
+
+.section-head{
+  margin-bottom:28px;
+  position:relative;
+  padding-left:24px;
+}
+.section-head::before{
+  content:"";
+  position:absolute;
+  left:0;top:6px;
+  width:10px;height:10px;
+  border-radius:50%;
+  background:var(--accent2);
+  box-shadow:0 0 10px rgba(181,52,47,0.8), 0 0 25px rgba(181,52,47,0.4);
+}
+.section-head .tag{
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  color:var(--accent2);
+  display:block;
+  margin-bottom:8px;
+  text-shadow:0 0 10px rgba(181,52,47,0.5);
+}
+.section-head h1,.section-head h2{
+  margin:0;
+  font-family:var(--display);
+  font-size:clamp(1.3rem,3vw,1.9rem);
+  font-weight:600;
+  color:var(--ink2);
+  letter-spacing:.05em;
+}
+
+/* ---------- Panel (question / result card) ---------- */
+.panel{
+  background:linear-gradient(135deg, rgba(15,17,20,0.95) 0%, rgba(12,14,16,0.98) 100%);
+  border:1px solid var(--line);
+  border-radius:var(--r2);
+  overflow:hidden;
+  margin-bottom:20px;
+  box-shadow:0 24px 48px -16px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.panel .bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:11px 16px;
+  background:linear-gradient(90deg, rgba(18,20,24,0.9), rgba(22,24,28,0.9));
+  border-bottom:1px solid var(--line);
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--dim);
+  letter-spacing:.08em;
+  position:relative;
+}
+.panel .bar::before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:2px;
+  background:linear-gradient(180deg, var(--accent2), var(--gold));
+  opacity:.6;
+}
+.panel-body{ padding:22px 20px; }
+
+.q-prompt{
+  margin:0 0 14px;
+  font-family:var(--serif);
+  font-size:16px;
+  color:var(--ink2);
+  font-weight:600;
+}
+
+.opt{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 10px;
+  border-radius:var(--r);
+  cursor:pointer;
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--ink);
+  transition:background .2s ease, color .2s ease;
+}
+.opt:hover{ background:rgba(181,52,47,0.06); color:var(--ink2); }
+.opt input{ accent-color:var(--accent2); cursor:pointer; }
+
+textarea, .text-input{
+  width:100%;
+  background:rgba(8,9,11,0.9);
+  border:1px solid var(--line2);
+  color:var(--ink2);
+  font-family:var(--mono);
+  font-size:13px;
+  padding:12px 14px;
+  border-radius:var(--r);
+  outline:none;
+  letter-spacing:.02em;
+  transition:border-color .25s ease, box-shadow .25s ease;
+}
+textarea{ resize:vertical; min-height:90px; }
+textarea:focus, .text-input:focus{
+  border-color:var(--accent2);
+  box-shadow:0 0 0 1px rgba(181,52,47,0.2), 0 0 15px rgba(181,52,47,0.12);
+}
+.helper-text{
+  margin:0 0 10px;
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--dim);
+}
+
+/* ---------- Light-mode overrides for the hardcoded dark fills above ----------
+   .panel / .bar / textarea / .btn use raw rgba() values (matching the main
+   site's own dark-mode CSS), so they need explicit light-mode swaps here —
+   var(--panel) etc. don't apply automatically inside a gradient. ---------- */
+body.light-theme .panel{
+  background:linear-gradient(135deg, #ffffff 0%, #faf9f6 100%);
+  box-shadow:0 8px 24px -12px rgba(30,27,22,0.14), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+body.light-theme .panel .bar{
+  background:linear-gradient(90deg, #f7f5f0, #f0eee9);
+}
+body.light-theme textarea,
+body.light-theme .text-input{
+  background:#ffffff;
+  color:var(--ink2);
+}
+body.light-theme .btn{
+  background:linear-gradient(135deg, #ffffff 0%, #f3f1ec 100%);
+  color:var(--dim2);
+}
+body.light-theme .btn:hover{ color:var(--ink2); }
+body.light-theme .opt:hover{ background:rgba(167,46,42,0.07); }
+body.light-theme .bar-track{ background:rgba(30,27,22,0.08); }
+
+/* ---------- Buttons ---------- */
+.btn{
+  position:relative;
+  border:1px solid var(--line2);
+  background:linear-gradient(135deg, rgba(22,24,28,0.9) 0%, rgba(16,18,22,0.95) 100%);
+  color:var(--dim2);
+  font-family:var(--mono);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  padding:13px 20px;
+  border-radius:var(--r);
+  cursor:pointer;
+  transition:border-color .2s ease, color .2s ease, transform .15s ease, box-shadow .2s ease;
+}
+.btn:hover{
+  border-color:rgba(181,52,47,0.5);
+  color:var(--ink2);
+  box-shadow:0 0 0 1px rgba(181,52,47,0.15), 0 0 20px rgba(181,52,47,0.1);
+  transform:translateY(-1px);
+}
+.btn:disabled{ opacity:.5; cursor:default; transform:none; }
+.btn.big{
+  width:100%;
+  background:linear-gradient(135deg, var(--accent) 0%, rgba(181,52,47,0.85) 50%, rgba(120,30,30,0.95) 100%);
+  border-color:var(--accent2);
+  color:#fff;
+  font-size:13px;
+  padding:15px 20px;
+}
+.btn.big:hover{ box-shadow:0 0 0 1px rgba(181,52,47,0.3), 0 0 30px rgba(181,52,47,0.25); }
+
+.error-box{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--accent3);
+  margin:14px 0;
+  display:none;
+}
+.error-box.show{ display:block; }
+
+/* ---------- Results ---------- */
+.loading{
+  text-align:center;
+  padding:70px 0;
+  font-family:var(--mono);
+  font-size:13px;
+  letter-spacing:.1em;
+  color:var(--dim2);
+}
+.total-line{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--dim);
+  letter-spacing:.08em;
+  margin:-10px 0 26px;
+}
+.my-answers p{ margin:8px 0; font-family:var(--mono); font-size:13px; color:var(--ink); }
+.my-answers strong{ color:var(--gold2); font-weight:500; }
+
+.results-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+@media (max-width:640px){ .results-grid{ grid-template-columns:1fr; } }
+
+.result-card h3{
+  margin:0 0 16px;
+  font-family:var(--serif);
+  font-size:14px;
+  color:var(--ink2);
+  font-weight:600;
+}
+.bar-row{
+  display:grid;
+  grid-template-columns:38% 1fr auto;
+  align-items:center;
+  gap:10px;
+  margin-bottom:11px;
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--ink);
+}
+.bar-track{
+  background:rgba(255,255,255,0.06);
+  border-radius:4px;
+  height:7px;
+  overflow:hidden;
+}
+.bar-fill{
+  background:linear-gradient(90deg, var(--accent2), var(--accent3));
+  height:100%;
+  border-radius:4px;
+  transition:width .5s ease;
+}
+.bar-pct{ min-width:42px; text-align:right; color:var(--dim2); }
+
+footer{
+  text-align:center;
+  padding:30px 0;
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--dim);
+  letter-spacing:.08em;
+}
+</style>
+</head>
+<body>
+<script>
+// Apply the saved theme BEFORE the page paints, so it opens in whatever
+// theme the visitor last chose on the main site (same localStorage key:
+// 'caseFilesTheme'), instead of flashing dark first.
+(function(){
+  var saved = 'dark';
+  try{ saved = localStorage.getItem('caseFilesTheme') || 'dark'; }catch(e){}
+  if(saved === 'light') document.body.classList.add('light-theme');
+})();
+</script>
+
+<div class="topbar">
+  <!-- EDIT: point this at your real homepage URL -->
+  <a class="home-mark" href="../index.html">
+    <span class="dot"></span>
+    <span>Case Files</span>
+  </a>
+  <nav class="topbar-links">
+    <!-- EDIT: point these at your real pages, or remove -->
+    <a href="../index.html">Home</a>
+    <a href="../index.html#database">Investigation</a>
+  </nav>
+  <div class="theme-toggle" aria-label="Appearance">
+    <button type="button" id="themeLight" aria-label="Light mode" title="Light mode">☀</button>
+    <button type="button" id="themeDark" aria-label="Dark mode" title="Dark mode">☾</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="section-head">
+    <span class="tag">Post-case debrief</span>
+    <h1 id="surveyHeading">Game End Survey</h1>
+  </div>
+
+  <div id="survey-root"></div>
+</div>
+
+<footer>© 2026 Case Files. All rights reserved.</footer>
+
+<script>
+// ============================================================
+// 1. FILL THESE IN from your Supabase project → Settings → API
+// ============================================================
+const SUPABASE_URL = "https://ztyiqumfipnopqdiwerf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0eWlxdW1maXBub3BxZGl3ZXJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1NzY3MzUsImV4cCI6MjEwNTE1MjczNX0.DbeMG0h8UzXTAOC9E5ZWdIyjIDyJd_3MrqkQ2iXFwcU";
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============================================================
+// 2. EDIT YOUR QUESTIONS BELOW
+// ============================================================
+const SURVEY_CONFIG = {
+  surveyId: "case-file-ending-survey",
+  title: "Game End Survey",
+  resultsTitle: "Players' choices",
+
+  questions: [
+    {
+      key: "conclusion",
+      type: "radio",
+      prompt: "What conclusion did you reach first as a result of your research?",
+      options: ["Nermin was killed", "Nermin was kidnapped", "Nermin committed suicide", "Nermin escaped alone"]
+    },
+    {
+      key: "responsible",
+      type: "checkbox",
+      prompt: "At first, who did you think is responsible for Nermin's disappearance?",
+      options: ["No one/she did it on her own", "Murat Arslan", "Ahmet Demir", "Fatma Aydin", "Ayse Kaya", "Ali Celik", "Mehmet Sahin", "Zehra Koc", "Emine Yildiz", "Hasan Yildiz"]
+    },
+    {
+      key: "car_accident",
+      type: "radio",
+      prompt: "Who caused the car accident?",
+      options: ["Someone else", "Emine Yildiz", "Hasan Yildiz", "Murat Arslan", "Mehmet Sahin", "Ahmet Demir", "Ali Celik", "Zehra Koc", "Ayse Kaya", "Fatma Aydin"]
+    },
+    {
+      key: "hospital_reason",
+      type: "radio",
+      prompt: "Why did Nermin go to the hospital?",
+      options: ["Miscarriage", "Unknown reason", "Actually didn't go to hospital", "Low blood sugar", "Panic attack", "Cancer", "Asthma attack", "Sprain", "Kidney failure", "Allergy"]
+    },
+    {
+      key: "final_decision",
+      type: "radio",
+      prompt: "What would you do after the last conversation?",
+      options: [
+        "Keep Nermin's escape to yourself. Murat Arslan will continue to stay in prison, Nermin will continue to live in hiding.",
+        "Go to the police with the last evidence in your hand. Hasan Yildiz and Emine Yildiz will be arrested for misleading the police, Murat Arslan will be released."
+      ]
+    }
+  ],
+
+  reviewField: {
+    enabled: true,
+    label: "Game Review (Optional)",
+    helperText: "If you enjoyed the game or want to improve it, I'd love to hear your thoughts!",
+    publicConsentLabel: "You can make my review public on the website"
+  },
+
+  sourceField: {
+    enabled: true,
+    label: "Where did you find or hear about the game? (Optional)",
+    placeholder: "e.g., Social media, friend, online search, reddit, etc."
+  },
+
+  oneSubmissionPerBrowser: true
+};
+
+// ============================================================
+// 3. ENGINE — you don't need to edit anything below this line
+// ============================================================
+function getAnonId(){
+  const K = "survey_anon_id";
+  let id = localStorage.getItem(K);
+  if(!id){ id = crypto.randomUUID(); localStorage.setItem(K, id); }
+  return id;
+}
+function hasAlreadySubmitted(id){ return localStorage.getItem(`survey_submitted_${id}`) === "true"; }
+function markAsSubmitted(id){ localStorage.setItem(`survey_submitted_${id}`, "true"); }
+function getMyStoredAnswers(id){ const r = localStorage.getItem(`survey_my_answers_${id}`); return r ? JSON.parse(r) : null; }
+function storeMyAnswers(id, answers){ localStorage.setItem(`survey_my_answers_${id}`, JSON.stringify(answers)); }
+function isEmptyAnswer(v){ if(v===undefined||v===null) return true; if(Array.isArray(v)) return v.length===0; return v===""; }
+
+function renderForm(config, container){
+  const form = document.createElement("form");
+
+  config.questions.forEach(q => form.appendChild(renderQuestion(q)));
+  if(config.reviewField?.enabled) form.appendChild(renderReviewField(config.reviewField));
+  if(config.sourceField?.enabled) form.appendChild(renderSourceField(config.sourceField));
+
+  const errorBox = document.createElement("div");
+  errorBox.className = "error-box";
+  form.appendChild(errorBox);
+
+  const submitBtn = document.createElement("button");
+  submitBtn.type = "submit";
+  submitBtn.className = "btn big";
+  submitBtn.textContent = "Submit";
+  form.appendChild(submitBtn);
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.classList.remove("show");
+
+    const answers = collectAnswers(config, form);
+    const missing = config.questions.find(q => q.required !== false && isEmptyAnswer(answers[q.key]));
+    if(missing){
+      errorBox.textContent = "Please answer: " + missing.prompt;
+      errorBox.classList.add("show");
+      form.querySelector(`[data-question-key="${missing.key}"]`)?.scrollIntoView({behavior:"smooth", block:"center"});
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+    try {
+      await submitSurvey(config, answers, form);
+      storeMyAnswers(config.surveyId, answers);
+      markAsSubmitted(config.surveyId);
+      await showResults(config, container, answers);
+    } catch(err){
+      console.error(err);
+      errorBox.textContent = "Something went wrong submitting your answers. Please try again.";
+      errorBox.classList.add("show");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit";
+    }
+  });
+
+  container.innerHTML = "";
+  container.appendChild(form);
+}
+
+function renderQuestion(q){
+  const wrap = document.createElement("div");
+  wrap.className = "panel";
+  wrap.dataset.questionKey = q.key;
+
+  const bar = document.createElement("div");
+  bar.className = "bar";
+  bar.innerHTML = `<span>${q.type === "checkbox" ? "MULTI_SELECT" : "SINGLE_SELECT"}.qry</span>`;
+  wrap.appendChild(bar);
+
+  const body = document.createElement("div");
+  body.className = "panel-body";
+
+  const prompt = document.createElement("p");
+  prompt.className = "q-prompt";
+  prompt.textContent = q.prompt;
+  body.appendChild(prompt);
+
+  q.options.forEach((opt, i) => {
+    const id = `${q.key}__${i}`;
+    const row = document.createElement("label");
+    row.className = "opt";
+    row.setAttribute("for", id);
+    const input = document.createElement("input");
+    input.type = q.type === "checkbox" ? "checkbox" : "radio";
+    input.name = q.key;
+    input.id = id;
+    input.value = opt;
+    const text = document.createElement("span");
+    text.textContent = opt;
+    row.appendChild(input);
+    row.appendChild(text);
+    body.appendChild(row);
+  });
+
+  wrap.appendChild(body);
+  return wrap;
+}
+
+function renderReviewField(cfg){
+  const wrap = document.createElement("div");
+  wrap.className = "panel";
+  const bar = document.createElement("div");
+  bar.className = "bar";
+  bar.innerHTML = `<span>REVIEW.txt</span>`;
+  wrap.appendChild(bar);
+
+  const body = document.createElement("div");
+  body.className = "panel-body";
+
+  const label = document.createElement("p");
+  label.className = "q-prompt";
+  label.textContent = cfg.label;
+  body.appendChild(label);
+
+  if(cfg.helperText){
+    const helper = document.createElement("p");
+    helper.className = "helper-text";
+    helper.textContent = cfg.helperText;
+    body.appendChild(helper);
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.name = "review_text";
+  body.appendChild(textarea);
+
+  const consentRow = document.createElement("label");
+  consentRow.className = "opt";
+  consentRow.style.marginTop = "12px";
+  const consentInput = document.createElement("input");
+  consentInput.type = "checkbox";
+  consentInput.name = "review_public";
+  consentInput.checked = true;
+  const consentText = document.createElement("span");
+  consentText.textContent = cfg.publicConsentLabel;
+  consentRow.appendChild(consentInput);
+  consentRow.appendChild(consentText);
+  body.appendChild(consentRow);
+
+  wrap.appendChild(body);
+  return wrap;
+}
+
+function renderSourceField(cfg){
+  const wrap = document.createElement("div");
+  wrap.className = "panel";
+  const bar = document.createElement("div");
+  bar.className = "bar";
+  bar.innerHTML = `<span>SOURCE.log</span>`;
+  wrap.appendChild(bar);
+
+  const body = document.createElement("div");
+  body.className = "panel-body";
+
+  const label = document.createElement("p");
+  label.className = "q-prompt";
+  label.textContent = cfg.label;
+  body.appendChild(label);
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "text-input";
+  input.name = "source";
+  input.placeholder = cfg.placeholder || "";
+  body.appendChild(input);
+
+  wrap.appendChild(body);
+  return wrap;
+}
+
+function collectAnswers(config, form){
+  const answers = {};
+  config.questions.forEach(q => {
+    if(q.type === "checkbox"){
+      answers[q.key] = Array.from(form.querySelectorAll(`input[name="${q.key}"]:checked`)).map(el => el.value);
+    } else {
+      const checked = form.querySelector(`input[name="${q.key}"]:checked`);
+      answers[q.key] = checked ? checked.value : "";
+    }
+  });
+  return answers;
+}
+
+async function submitSurvey(config, answers, form){
+  const reviewText = form.querySelector('[name="review_text"]')?.value?.trim() || null;
+  const reviewPublic = !!form.querySelector('[name="review_public"]')?.checked;
+  const source = form.querySelector('[name="source"]')?.value?.trim() || null;
+
+  const { error } = await supabaseClient.from("survey_responses").insert({
+    survey_id: config.surveyId,
+    anon_id: getAnonId(),
+    answers,
+    review_text: reviewText,
+    review_public: reviewPublic,
+    source
+  });
+  if(error) throw error;
+}
+
+async function fetchAggregatedResults(surveyId){
+  const { data: rpcData, error: rpcError } = await supabaseClient.rpc("get_survey_results", { p_survey_id: surveyId });
+  if(!rpcError && rpcData) return shapeRpcResults(rpcData);
+
+  const { data, error } = await supabaseClient.from("survey_responses").select("answers").eq("survey_id", surveyId);
+  if(error) throw error;
+  return aggregateClientSide(data);
+}
+
+function shapeRpcResults(rows){
+  const byQuestion = {};
+  let total = 0;
+  rows.forEach(row => {
+    total = Math.max(total, Number(row.total_respondents));
+    if(!byQuestion[row.question_key]) byQuestion[row.question_key] = [];
+    byQuestion[row.question_key].push({ value: row.answer_value, count: Number(row.response_count) });
+  });
+  return { total, byQuestion };
+}
+
+function aggregateClientSide(rows){
+  const byQuestion = {};
+  const total = rows.length;
+  rows.forEach(({answers}) => {
+    Object.entries(answers || {}).forEach(([key, val]) => {
+      if(!byQuestion[key]) byQuestion[key] = {};
+      const values = Array.isArray(val) ? val : [val];
+      values.forEach(v => {
+        if(v === "" || v == null) return;
+        byQuestion[key][v] = (byQuestion[key][v] || 0) + 1;
+      });
+    });
+  });
+  const shaped = {};
+  Object.entries(byQuestion).forEach(([key, counts]) => {
+    shaped[key] = Object.entries(counts).map(([value, count]) => ({value, count})).sort((a,b) => b.count - a.count);
+  });
+  return { total, byQuestion: shaped };
+}
+
+async function showResults(config, container, myAnswers){
+  container.innerHTML = `<div class="loading">Let's see what others chose...</div>`;
+  let results;
+  try {
+    results = await fetchAggregatedResults(config.surveyId);
+  } catch(err){
+    console.error(err);
+    container.innerHTML = `<div class="error-box show">Couldn't load results right now. Please refresh.</div>`;
+    return;
+  }
+  renderResults(config, container, myAnswers || getMyStoredAnswers(config.surveyId), results);
+}
+
+function renderResults(config, container, myAnswers, results){
+  const wrap = document.createElement("div");
+
+  const totalLine = document.createElement("p");
+  totalLine.className = "total-line";
+  totalLine.textContent = `Total responses: ${results.total}`;
+  wrap.appendChild(totalLine);
+
+  if(myAnswers){
+    const box = document.createElement("div");
+    box.className = "panel";
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    bar.innerHTML = `<span>YOUR_ANSWERS.log</span>`;
+    box.appendChild(bar);
+    const body = document.createElement("div");
+    body.className = "panel-body my-answers";
+    config.questions.forEach(q => {
+      const val = myAnswers[q.key];
+      const displayVal = Array.isArray(val) ? val.join(", ") : val;
+      if(!displayVal) return;
+      const line = document.createElement("p");
+      const strong = document.createElement("strong");
+      strong.textContent = q.prompt + ": ";
+      line.appendChild(strong);
+      line.appendChild(document.createTextNode(displayVal));
+      body.appendChild(line);
+    });
+    if(myAnswers.source){
+      const line = document.createElement("p");
+      const strong = document.createElement("strong");
+      strong.textContent = (config.sourceField?.label || "Source") + ": ";
+      line.appendChild(strong);
+      line.appendChild(document.createTextNode(myAnswers.source));
+      body.appendChild(line);
+    }
+    box.appendChild(body);
+    wrap.appendChild(box);
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "results-grid";
+  config.questions.forEach(q => grid.appendChild(renderResultCard(q, results.byQuestion[q.key] || [], results.total)));
+  wrap.appendChild(grid);
+
+  container.innerHTML = "";
+  container.appendChild(wrap);
+}
+
+function renderResultCard(question, countsForQuestion, total){
+  const card = document.createElement("div");
+  card.className = "panel result-card";
+  const bar = document.createElement("div");
+  bar.className = "bar";
+  bar.innerHTML = `<span>RESULT.stat</span>`;
+  card.appendChild(bar);
+
+  const body = document.createElement("div");
+  body.className = "panel-body";
+
+  const title = document.createElement("h3");
+  title.textContent = question.prompt;
+  body.appendChild(title);
+
+  const countMap = {};
+  countsForQuestion.forEach(c => countMap[c.value] = c.count);
+  const rows = question.options.map(opt => ({ value: opt, count: countMap[opt] || 0 }));
+  rows.sort((a,b) => b.count - a.count);
+
+  rows.forEach(row => {
+    const pct = total > 0 ? (row.count / total) * 100 : 0;
+    body.appendChild(renderBarRow(row.value, pct));
+  });
+
+  card.appendChild(body);
+  return card;
+}
+
+function renderBarRow(label, pct){
+  const row = document.createElement("div");
+  row.className = "bar-row";
+
+  const labelEl = document.createElement("span");
+  labelEl.textContent = label;
+
+  const track = document.createElement("div");
+  track.className = "bar-track";
+  const fill = document.createElement("div");
+  fill.className = "bar-fill";
+  fill.style.width = pct.toFixed(1) + "%";
+  track.appendChild(fill);
+
+  const pctEl = document.createElement("span");
+  pctEl.className = "bar-pct";
+  pctEl.textContent = pct.toFixed(1) + "%";
+
+  row.appendChild(labelEl);
+  row.appendChild(track);
+  row.appendChild(pctEl);
+  return row;
+}
+
+async function initSurvey(containerId, config){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  document.getElementById("surveyHeading").textContent = config.title;
+  if(config.oneSubmissionPerBrowser && hasAlreadySubmitted(config.surveyId)){
+    await showResults(config, container, getMyStoredAnswers(config.surveyId));
+    return;
+  }
+  renderForm(config, container);
+}
+
+// ---------- Theme toggle: shares the 'caseFilesTheme' key with the main
+// site, so switching here (or there) stays in sync on next visit. ----------
+(function(){
+  var root = document.body;
+  var light = document.getElementById('themeLight');
+  var dark = document.getElementById('themeDark');
+  function applyTheme(theme){
+    var isLight = theme === 'light';
+    root.classList.toggle('light-theme', isLight);
+    light.classList.toggle('active', isLight);
+    dark.classList.toggle('active', !isLight);
+    try{ localStorage.setItem('caseFilesTheme', isLight ? 'light' : 'dark'); }catch(e){}
+  }
+  var saved = 'dark';
+  try{ saved = localStorage.getItem('caseFilesTheme') || 'dark'; }catch(e){}
+  applyTheme(saved === 'light' ? 'light' : 'dark');
+  light.addEventListener('click', function(){ applyTheme('light'); });
+  dark.addEventListener('click', function(){ applyTheme('dark'); });
+})();
+
+document.addEventListener("DOMContentLoaded", () => {
+  initSurvey("survey-root", SURVEY_CONFIG);
+});
+</script>
+</body>
+</html>
